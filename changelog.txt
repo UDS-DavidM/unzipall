@@ -1,0 +1,6 @@
+110225:
+-fixed program failing to extract and creating an empty folder when the basename of the archive ends with a space
+
+140825:
+-added support for .tar, .gz and .bz2 archives
+-fixed issue in error print string
