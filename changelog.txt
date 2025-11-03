@@ -1,3 +1,8 @@
+v3-2025.11.03:
+-by default, program will now skip already existing folders instead of silently overwriting them (this behaviour can be toggled via the "force" parameter)
+-program will now detect and extract nested archives (this behaviour can be toggled via the "recursive" parameter)
+-minor code cleanup
+
 110225:
 -fixed program failing to extract and creating an empty folder when the basename of the archive ends with a space
 

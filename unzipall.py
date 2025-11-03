@@ -11,6 +11,9 @@ import sys
 from collections import Counter, deque
 import send2trash
 
+ver = "v3"
+vdate = "2025.11.03"
+
 root = r""
 verbose = True
 delete = True
@@ -33,15 +36,20 @@ def unzip_all(root=root, dry=dry, delete=delete, trash=trash, recursive=recursiv
 
     if not totalnum: print("\nNothing to be done."); return
 
+    q = deque(fileslist)
+    discovered = 0
+    processed = 0
     success = 0
     error = 0
     deletion_error = 0
-    for i, file in enumerate(fileslist):
-        print(f"({i+1}/{totalnum}) Unpacking {file}... ", end="")
+    while q:
+        file = q.popleft()
+        processed += 1
+        print(f"({processed}/{totalnum+discovered}) Unpacking {file}... ", end="")
         try:
             outdir = file.removesuffix(ufuncts.extension(file, dot=True)).strip()
             if os.path.isdir(outdir) and not force:
-                print(f"Directory '{outdir}' already exists - skipping.")
+                print(f"\nDirectory '{outdir}' already exists - skipping.")
                 continue
             if not dry:
                 os.makedirs(outdir, exist_ok=True)
@@ -49,17 +57,30 @@ def unzip_all(root=root, dry=dry, delete=delete, trash=trash, recursive=recursiv
                 if not os.path.isdir(outdir):
                     raise OSError(f"\nFailed to create output directory '{outdir}'.")
             success += 1
+            
+            #cleanup original archive
             if delete and not dry:
                 try:
                     remove(file)
                 except Exception as _e:
                     print(f"\nDeletion Error ({file}): {_e}", file=sys.stderr)
                     deletion_error += 1
-                    continue
+                    
+            #recursively discover nested archives
+            if recursive and os.path.isdir(outdir):
+                try:
+                    inner = [p for p in ufuncts.subfileslist(outdir) if ufuncts.extension(p) in supported_formats]
+                    if inner:
+                        q.extend(inner)
+                        discovered += len(inner)
+                except Exception as _scan_e:
+                    print(f"\nWarning: Could not scan '{outdir}' for nested archives: {_scan_e}", file=sys.stderr)
+                    
         except Exception as e:
             print(f"\n{file}: {e}", file=sys.stderr)
             error += 1
             continue
+        
         print("OK")
             
     if success:
@@ -70,5 +91,8 @@ def unzip_all(root=root, dry=dry, delete=delete, trash=trash, recursive=recursiv
         
     if deletion_error:
         print(f"\n{deletion_error} files could not be deleted.", file=sys.stderr)
+        
+    if recursive and discovered:
+        print(f"\nDiscovered and processed {discovered} nested archive(s).")
         
     print("\nOK")
